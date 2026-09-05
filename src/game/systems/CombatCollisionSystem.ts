@@ -2,6 +2,7 @@ import { PLAYER_SPAWN_POINT } from '../constants';
 import { intersects } from '../collision/AABB';
 import { PlayerTank } from '../entities/PlayerTank';
 import { EnemyTank } from '../entities/EnemyTank';
+import { audio } from '../audio/AudioManager';
 import {
   EnemyType,
   type ExplosionEntity,
@@ -44,6 +45,7 @@ export class CombatCollisionSystem {
           const isDead = et.takeDamage(b.power);
 
           if (isDead) {
+            audio.playExplosion(true);
             this.addExplosion(
               explosions,
               enemy.x + enemy.width / 2,
@@ -53,7 +55,8 @@ export class CombatCollisionSystem {
             // 经典算分
             this.addScore(world, et.enemyType);
           } else {
-            // 受击火花
+            // 受击火花与金属击打音
+            audio.playHitSteel();
             this.addExplosion(
               explosions,
               b.x + b.width / 2,
@@ -76,11 +79,13 @@ export class CombatCollisionSystem {
 
           // 若处于出生护盾期，免疫所有攻击
           if (player.invincibleTimer > 0) {
+            audio.playHitSteel();
             this.addExplosion(explosions, b.x, b.y, false);
             continue;
           }
 
           // 玩家阵亡
+          audio.playExplosion(true);
           this.addExplosion(
             explosions,
             player.x + player.width / 2,

@@ -11,6 +11,7 @@ import { SpawnSystem } from './systems/SpawnSystem';
 import { EnemyAISystem } from './systems/EnemyAISystem';
 import { CombatCollisionSystem } from './systems/CombatCollisionSystem';
 import { RenderSystem } from './rendering/RenderSystem';
+import { audio } from './audio/AudioManager';
 import {
   GameState,
   type GameWorld,
@@ -239,6 +240,7 @@ export class GameEngine {
         const bullet = Bullet.createFromTank(Date.now() + Math.random(), player);
         this.world.bullets.push(bullet);
         player.triggerFireCooldown();
+        audio.playShoot();
       }
     }
 
@@ -283,6 +285,7 @@ export class GameEngine {
     if (!this.world.base.alive && !this.world.isBaseDestroyed) {
       this.world.isBaseDestroyed = true;
       this.gameState = GameState.GAME_OVER;
+      audio.playGameOver();
       this.emitState();
       return;
     }
@@ -290,6 +293,7 @@ export class GameEngine {
     // 玩家命尽
     if (this.world.playerLives <= 0 && this.gameState === GameState.PLAYING) {
       this.gameState = GameState.GAME_OVER;
+      audio.playGameOver();
       this.emitState();
       return;
     }

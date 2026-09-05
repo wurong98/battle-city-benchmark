@@ -1,5 +1,6 @@
 import { DIR_VECTORS, TILE_SIZE, MAP_TILES } from '../constants';
 import { TileMap } from '../map/TileMap';
+import { audio } from '../audio/AudioManager';
 import {
   Direction,
   TileType,
@@ -45,6 +46,7 @@ export class BulletSystem {
       if (base.alive && intersects(b, base)) {
         b.active = false;
         base.alive = false;
+        audio.playExplosion(true);
         this.addHitExplosion(explosions, base.x + 16, base.y + 16, true);
         continue;
       }
@@ -64,7 +66,8 @@ export class BulletSystem {
     const minRow = Math.floor(bullet.y / TILE_SIZE);
     const maxRow = Math.floor((bullet.y + bullet.height - 0.01) / TILE_SIZE);
 
-    let hitOccurred = false;
+    let hitBrick = false;
+    let hitSteel = false;
 
     for (let r = minRow; r <= maxRow; r++) {
       for (let c = minCol; c <= maxCol; c++) {
@@ -74,18 +77,20 @@ export class BulletSystem {
           const currentMask = map.getBrickMask(c, r);
           const newMask = this.damageBrick(currentMask, bullet.direction);
           map.setBrickMask(c, r, newMask);
-          hitOccurred = true;
+          hitBrick = true;
         } else if (tile === TileType.Steel) {
           if (bullet.power >= 2) {
             map.setTile(c, r, TileType.Empty);
           }
-          hitOccurred = true;
+          hitSteel = true;
         }
       }
     }
 
-    if (hitOccurred) {
+    if (hitBrick || hitSteel) {
       bullet.active = false;
+      if (hitBrick) audio.playHitBrick();
+      else if (hitSteel) audio.playHitSteel();
       this.addHitExplosion(explosions, bullet.x + bullet.width / 2, bullet.y + bullet.height / 2, false);
     }
   }
