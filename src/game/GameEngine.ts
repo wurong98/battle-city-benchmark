@@ -7,6 +7,9 @@ import { PlayerTank } from './entities/PlayerTank';
 import { BulletSystem } from './systems/BulletSystem';
 import { InputSystem } from './systems/InputSystem';
 import { MovementSystem } from './systems/MovementSystem';
+import { SpawnSystem } from './systems/SpawnSystem';
+import { EnemyAISystem } from './systems/EnemyAISystem';
+import { CombatCollisionSystem } from './systems/CombatCollisionSystem';
 import { RenderSystem } from './rendering/RenderSystem';
 import {
   GameState,
@@ -30,6 +33,9 @@ export class GameEngine {
   private inputSystem: InputSystem;
   private movementSystem: MovementSystem;
   private bulletSystem: BulletSystem;
+  private spawnSystem: SpawnSystem;
+  private enemyAISystem: EnemyAISystem;
+  private combatCollisionSystem: CombatCollisionSystem;
   private renderSystem: RenderSystem;
   private gameLoop: GameLoop;
   private eventListeners: GameEventCallback[] = [];
@@ -77,6 +83,9 @@ export class GameEngine {
     this.inputSystem = new InputSystem();
     this.movementSystem = new MovementSystem();
     this.bulletSystem = new BulletSystem();
+    this.spawnSystem = new SpawnSystem();
+    this.enemyAISystem = new EnemyAISystem(this.movementSystem);
+    this.combatCollisionSystem = new CombatCollisionSystem();
     this.renderSystem = new RenderSystem(ctx);
 
     this.gameLoop = new GameLoop(this.update, this.render);
@@ -90,6 +99,8 @@ export class GameEngine {
     };
   }
 
+  private lastEmittedState = '';
+
   private emitState(): void {
     const payload = {
       score: this.world.score,
@@ -98,6 +109,10 @@ export class GameEngine {
       enemiesRemaining: this.world.enemiesRemaining,
       gameState: this.gameState,
     };
+    const key = `${payload.score}-${payload.lives}-${payload.stage}-${payload.enemiesRemaining}-${payload.gameState}`;
+    if (key === this.lastEmittedState) return;
+    this.lastEmittedState = key;
+
     for (const listener of this.eventListeners) {
       listener(payload);
     }
@@ -174,7 +189,7 @@ export class GameEngine {
       return;
     }
 
-    // 1. 玩家移动逻辑
+    // 1. 玩家输入与移动逻辑
     const player = this.world.player as PlayerTank | null;
     if (player && player.active) {
       player.update(dt);
@@ -201,7 +216,13 @@ export class GameEngine {
       }
     }
 
-    // 2. 子弹系统推进与碰撞
+    // 2. 敌人生成调度
+    this.spawnSystem.update(this.world, dt);
+
+    // 3. 敌人 AI 决策与移动
+    this.enemyAISystem.update(this.world, this.tileMap, dt);
+
+    // 4. 子弹系统推进与地图破坏
     this.bulletSystem.update(
       this.world.bullets,
       this.tileMap,
@@ -210,7 +231,10 @@ export class GameEngine {
       dt
     );
 
-    // 3. 特效与爆炸步进
+    // 5. 战斗对抗碰撞 (Bullet vs Bullet, Bullet vs Tank)
+    this.combatCollisionSystem.update(this.world, dt);
+
+    // 6. 特效与爆炸步进
     for (const exp of this.world.explosions) {
       if (!exp.active) continue;
       exp.elapsed += dt;
@@ -223,16 +247,41 @@ export class GameEngine {
       }
     }
 
-    // 4. 清理失效子弹与特效
+    // 7. 清理失效实体 (Bullets, Enemies, Explosions)
     this.world.bullets = this.world.bullets.filter((b) => b.active);
+    this.world.enemies = this.world.enemies.filter((e) => e.active);
     this.world.explosions = this.world.explosions.filter((e) => e.active);
 
-    // 5. 基地死亡检测
+    // 8. 胜负规则判定
+    // 基地被毁
     if (!this.world.base.alive && !this.world.isBaseDestroyed) {
       this.world.isBaseDestroyed = true;
       this.gameState = GameState.GAME_OVER;
       this.emitState();
+      return;
     }
+
+    // 玩家命尽
+    if (this.world.playerLives <= 0 && this.gameState === GameState.PLAYING) {
+      this.gameState = GameState.GAME_OVER;
+      this.emitState();
+      return;
+    }
+
+    // 敌人清空 -> 通关
+    if (
+      this.world.enemiesRemaining === 0 &&
+      this.world.enemies.length === 0 &&
+      this.world.spawnStars.length === 0 &&
+      this.gameState === GameState.PLAYING
+    ) {
+      this.gameState = GameState.STAGE_CLEAR;
+      this.emitState();
+      return;
+    }
+
+    // 同步给 UI（如果分数或剩余敌人变化）
+    this.emitState();
   };
 
   // 渲染函数
