@@ -90,6 +90,9 @@ export class GameEngine {
     this.renderSystem = new RenderSystem(ctx);
 
     this.gameLoop = new GameLoop(this.update, this.render);
+
+    // 初始静态渲染一帧地图与基地
+    this.render(0);
   }
 
   public subscribe(cb: GameEventCallback): () => void {
@@ -121,6 +124,7 @@ export class GameEngine {
 
   public start(): void {
     this.gameState = GameState.PLAYING;
+    audio.playStageStart();
     this.emitState();
     this.gameLoop.start();
   }

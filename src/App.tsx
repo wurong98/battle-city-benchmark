@@ -3,6 +3,7 @@ import { GameCanvas } from './components/GameCanvas';
 import { GameHUD } from './components/GameHUD';
 import { GameOverOverlay } from './components/GameOverOverlay';
 import { StageClearOverlay } from './components/StageClearOverlay';
+import { StartScreenOverlay } from './components/StartScreenOverlay';
 import { GameEngine } from './game/GameEngine';
 import { GameState } from './game/types/game';
 
@@ -22,6 +23,10 @@ export default function App() {
       setSession(state);
     });
   }, []);
+
+  const handleStartGame = () => {
+    engine?.start();
+  };
 
   const handleRestart = () => {
     engine?.restart();
@@ -89,6 +94,11 @@ export default function App() {
           onRestart={handleRestart}
           onPauseToggle={handlePauseToggle}
         />
+
+        {/* 经典开场画面 (等待用户交互触发，符合浏览器交互与音频自动播放机制) */}
+        {session.gameState === GameState.READY && (
+          <StartScreenOverlay onStart={handleStartGame} />
+        )}
 
         {/* 暂停遮罩 */}
         {session.gameState === GameState.PAUSED && (

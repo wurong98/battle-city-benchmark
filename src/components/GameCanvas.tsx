@@ -16,7 +16,7 @@ export function GameCanvas({ onEngineReady }: GameCanvasProps) {
 
     const engine = new GameEngine(canvas);
     engineRef.current = engine;
-    engine.start();
+    // 引擎保持在 READY 状态，等待用户点击开始进入 PLAYING 并播放原版开场音乐
 
     if (onEngineReady) {
       onEngineReady(engine);
