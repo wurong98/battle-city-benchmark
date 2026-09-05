@@ -1,6 +1,6 @@
 /**
  * 经典 FC 坦克大战 100% 原版 ROM 真实提取音频引擎 (基于 Web Audio API)
- * 支持原版 stage_start, explosion_1/2, bullet_shot, bullet_hit_1/2, game_over
+ * 支持原版 stage_start, explosion_1/2, bullet_shot, bullet_hit_1/2, game_over, tank_move, tank_idle
  */
 export class AudioManager {
   private ctx: AudioContext | null = null;
@@ -10,6 +10,11 @@ export class AudioManager {
   private buffers: Map<string, AudioBuffer> = new Map();
   private isLoaded: boolean = false;
   private pendingStartTheme: boolean = false;
+
+  // 坦克移动与静止音效 Loop 状态节点
+  private moveSource: AudioBufferSourceNode | null = null;
+  private moveGain: GainNode | null = null;
+  private isMovingSoundActive: boolean = false;
 
   constructor() {
     this.preloadAll();
@@ -24,6 +29,8 @@ export class AudioManager {
       { key: 'bullet_hit_1', url: '/assets/audio/bullet_hit_1.ogg' },
       { key: 'bullet_hit_2', url: '/assets/audio/bullet_hit_2.ogg' },
       { key: 'game_over', url: '/assets/audio/game_over.ogg' },
+      { key: 'tank_move', url: '/assets/audio/tank_move.ogg' },
+      { key: 'tank_idle', url: '/assets/audio/tank_idle.ogg' },
     ];
 
     for (const item of audioFiles) {
@@ -38,7 +45,7 @@ export class AudioManager {
           }
         }
       } catch {
-        // 后续调用时若无 buffer 可自动重试或降级
+        // 容错处理
       }
     }
     this.isLoaded = true;
@@ -76,7 +83,7 @@ export class AudioManager {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(() => {});
+      ctxResume(this.ctx);
     }
     return this.ctx;
   }
@@ -85,9 +92,8 @@ export class AudioManager {
     const ctx = this.ensureContext();
     if (!ctx) return;
 
-    // 浏览器 autoplay 限制未解锁时记录 pending
     if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
+      ctxResume(ctx);
     }
 
     const buffer = this.buffers.get(key);
@@ -102,8 +108,60 @@ export class AudioManager {
       gainNode.connect(ctx.destination);
       source.start(0);
     } catch {
-      // 忽略单个音频节点启动异常
+      // 容错
     }
+  }
+
+  /**
+   * 坦克移动引擎音效：持续循环播放
+   */
+  public startTankMove(): void {
+    if (this.isMovingSoundActive) return;
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const buffer = this.buffers.get('tank_move') || this.buffers.get('tank_idle');
+    if (!buffer) return;
+
+    try {
+      this.stopTankMove();
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(0);
+
+      this.moveSource = source;
+      this.moveGain = gain;
+      this.isMovingSoundActive = true;
+    } catch {
+      // 容错
+    }
+  }
+
+  /**
+   * 停止坦克移动引擎音效
+   */
+  public stopTankMove(): void {
+    if (this.moveSource) {
+      try {
+        if (this.moveGain && this.ctx) {
+          this.moveGain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+        }
+        this.moveSource.stop(this.ctx ? this.ctx.currentTime + 0.05 : 0);
+        this.moveSource.disconnect();
+      } catch {
+        // 忽略已经 stop 的异常
+      }
+      this.moveSource = null;
+      this.moveGain = null;
+    }
+    this.isMovingSoundActive = false;
   }
 
   /**
@@ -160,8 +218,13 @@ export class AudioManager {
    * 原版游戏结束音效
    */
   public playGameOver(): void {
+    this.stopTankMove();
     this.playBuffer('game_over', 0.55);
   }
+}
+
+function ctxResume(ctx: AudioContext) {
+  ctx.resume().catch(() => {});
 }
 
 export const audio = new AudioManager();

@@ -132,6 +132,7 @@ export class GameEngine {
   public pause(): void {
     if (this.gameState === GameState.PLAYING) {
       this.gameState = GameState.PAUSED;
+      audio.stopTankMove();
       this.emitState();
     }
   }
@@ -199,6 +200,7 @@ export class GameEngine {
   }
 
   public destroy(): void {
+    audio.stopTankMove();
     this.gameLoop.stop();
     this.inputSystem.destroy();
     this.eventListeners = [];
@@ -224,6 +226,7 @@ export class GameEngine {
 
     // 1. 玩家输入与移动逻辑
     const player = this.world.player as PlayerTank | null;
+    let isPlayerMoving = false;
     if (player && player.active) {
       player.update(dt);
       const dir = this.inputSystem.getCurrentDirection();
@@ -238,6 +241,7 @@ export class GameEngine {
         );
         if (moved) {
           player.stepAnimation(dt);
+          isPlayerMoving = true;
         }
       }
 
@@ -248,6 +252,13 @@ export class GameEngine {
         player.triggerFireCooldown();
         audio.playShoot();
       }
+    }
+
+    // 播放/停止坦克移动引擎音效
+    if (isPlayerMoving) {
+      audio.startTankMove();
+    } else {
+      audio.stopTankMove();
     }
 
     // 2. 敌人生成调度
@@ -311,6 +322,7 @@ export class GameEngine {
       this.world.spawnStars.length === 0 &&
       this.gameState === GameState.PLAYING
     ) {
+      audio.stopTankMove();
       this.gameState = GameState.STAGE_CLEAR;
       this.emitState();
       return;
