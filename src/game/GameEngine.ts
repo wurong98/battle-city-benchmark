@@ -165,6 +165,32 @@ export class GameEngine {
     this.emitState();
   }
 
+  public nextStage(): void {
+    const nextStageIndex = (this.world.stage % STAGES.length);
+    const nextStageConfig = STAGES[nextStageIndex];
+    this.world.stage = nextStageConfig.stage;
+    this.tileMap.load(nextStageConfig.grid);
+    this.world.mapData = this.tileMap.grid;
+    this.world.brickMasks = this.tileMap.brickMasks;
+    this.world.enemiesRemaining = nextStageConfig.enemies.length;
+    this.world.enemies = [];
+    this.world.bullets = [];
+    this.world.explosions = [];
+    this.world.spawnStars = [];
+    this.world.base.alive = true;
+    this.world.isBaseDestroyed = false;
+
+    if (this.world.player) {
+      (this.world.player as PlayerTank).reset(
+        PLAYER_SPAWN_POINT.x,
+        PLAYER_SPAWN_POINT.y
+      );
+    }
+
+    this.gameState = GameState.PLAYING;
+    this.emitState();
+  }
+
   public destroy(): void {
     this.gameLoop.stop();
     this.inputSystem.destroy();
