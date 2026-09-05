@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { GameCanvas } from './components/GameCanvas';
 import { GameHUD } from './components/GameHUD';
+import { GameOverOverlay } from './components/GameOverOverlay';
+import { StageClearOverlay } from './components/StageClearOverlay';
 import { GameEngine } from './game/GameEngine';
 import { GameState } from './game/types/game';
 
@@ -23,6 +25,10 @@ export default function App() {
 
   const handleRestart = () => {
     engine?.restart();
+  };
+
+  const handleNextStage = () => {
+    engine?.nextStage();
   };
 
   const handlePauseToggle = () => {
@@ -107,6 +113,24 @@ export default function App() {
           >
             PAUSE
           </div>
+        )}
+
+        {/* 游戏结束遮罩 */}
+        {session.gameState === GameState.GAME_OVER && (
+          <GameOverOverlay
+            score={session.score}
+            stage={session.stage}
+            onRestart={handleRestart}
+          />
+        )}
+
+        {/* 通关过关遮罩 */}
+        {session.gameState === GameState.STAGE_CLEAR && (
+          <StageClearOverlay
+            score={session.score}
+            stage={session.stage}
+            onNextStage={handleNextStage}
+          />
         )}
       </div>
     </div>
