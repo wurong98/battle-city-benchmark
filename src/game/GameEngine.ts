@@ -2,7 +2,9 @@ import { BASE_POSITION, PLAYER_SPAWN_POINT } from './constants';
 import { GameLoop } from './GameLoop';
 import { TileMap } from './map/TileMap';
 import { STAGES } from './map/stages';
+import { Bullet } from './entities/Bullet';
 import { PlayerTank } from './entities/PlayerTank';
+import { BulletSystem } from './systems/BulletSystem';
 import { InputSystem } from './systems/InputSystem';
 import { MovementSystem } from './systems/MovementSystem';
 import { RenderSystem } from './rendering/RenderSystem';
@@ -27,6 +29,7 @@ export class GameEngine {
 
   private inputSystem: InputSystem;
   private movementSystem: MovementSystem;
+  private bulletSystem: BulletSystem;
   private renderSystem: RenderSystem;
   private gameLoop: GameLoop;
   private eventListeners: GameEventCallback[] = [];
@@ -73,6 +76,7 @@ export class GameEngine {
     // 系统装载
     this.inputSystem = new InputSystem();
     this.movementSystem = new MovementSystem();
+    this.bulletSystem = new BulletSystem();
     this.renderSystem = new RenderSystem(ctx);
 
     this.gameLoop = new GameLoop(this.update, this.render);
@@ -188,6 +192,46 @@ export class GameEngine {
           player.stepAnimation(dt);
         }
       }
+
+      // 玩家开火逻辑
+      if (this.inputSystem.keys.fire && player.canFire(this.world.bullets)) {
+        const bullet = Bullet.createFromTank(Date.now() + Math.random(), player);
+        this.world.bullets.push(bullet);
+        player.triggerFireCooldown();
+      }
+    }
+
+    // 2. 子弹系统推进与碰撞
+    this.bulletSystem.update(
+      this.world.bullets,
+      this.tileMap,
+      this.world.base,
+      this.world.explosions,
+      dt
+    );
+
+    // 3. 特效与爆炸步进
+    for (const exp of this.world.explosions) {
+      if (!exp.active) continue;
+      exp.elapsed += dt;
+      if (exp.elapsed >= exp.frameDuration) {
+        exp.elapsed = 0;
+        exp.frame++;
+        if (exp.frame >= exp.maxFrames) {
+          exp.active = false;
+        }
+      }
+    }
+
+    // 4. 清理失效子弹与特效
+    this.world.bullets = this.world.bullets.filter((b) => b.active);
+    this.world.explosions = this.world.explosions.filter((e) => e.active);
+
+    // 5. 基地死亡检测
+    if (!this.world.base.alive && !this.world.isBaseDestroyed) {
+      this.world.isBaseDestroyed = true;
+      this.gameState = GameState.GAME_OVER;
+      this.emitState();
     }
   };
 
