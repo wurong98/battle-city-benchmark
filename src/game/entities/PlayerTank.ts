@@ -1,5 +1,5 @@
-import { PLAYER_SPEED, PLAYER_SPAWN_INVINCIBLE, TANK_SIZE } from '../constants';
-import { Direction, type TankEntity, type Team } from '../types/game';
+import { PLAYER_FIRE_COOLDOWN, PLAYER_SPEED, PLAYER_SPAWN_INVINCIBLE, TANK_SIZE } from '../constants';
+import { Direction, type BulletEntity, type TankEntity, type Team } from '../types/game';
 
 export class PlayerTank implements TankEntity {
   public id: number;
@@ -15,6 +15,7 @@ export class PlayerTank implements TankEntity {
   public maxHp: number = 1;
   public cooldown: number = 0;
   public invincibleTimer: number = PLAYER_SPAWN_INVINCIBLE;
+  public maxBullets: number = 1; // 经典限制：同屏存活子弹数
 
   // 履带行动动画步进值 (0 或 1)
   public animFrame: number = 0;
@@ -24,6 +25,18 @@ export class PlayerTank implements TankEntity {
     this.id = id;
     this.x = x;
     this.y = y;
+  }
+
+  public canFire(bullets: BulletEntity[]): boolean {
+    if (!this.active || this.cooldown > 0) return false;
+    const activePlayerBullets = bullets.filter(
+      (b) => b.ownerId === this.id && b.active
+    ).length;
+    return activePlayerBullets < this.maxBullets;
+  }
+
+  public triggerFireCooldown(): void {
+    this.cooldown = PLAYER_FIRE_COOLDOWN;
   }
 
   public update(dt: number): void {
