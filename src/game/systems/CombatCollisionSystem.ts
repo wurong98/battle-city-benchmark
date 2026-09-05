@@ -45,7 +45,7 @@ export class CombatCollisionSystem {
           const isDead = et.takeDamage(b.power);
 
           if (isDead) {
-            audio.playExplosion(true);
+            audio.playKillEnemy();
             this.addExplosion(
               explosions,
               enemy.x + enemy.width / 2,

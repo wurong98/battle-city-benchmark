@@ -1,4 +1,5 @@
 import { Direction } from '../types/game';
+import { audio } from '../audio/AudioManager';
 
 export interface KeyState {
   up: boolean;
@@ -30,15 +31,23 @@ export class InputSystem {
   private bindEvents(): void {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
+    window.addEventListener('pointerdown', this.handlePointerDown);
   }
 
   public destroy(): void {
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
+    window.removeEventListener('pointerdown', this.handlePointerDown);
     this.activeDirections = [];
   }
 
+  private handlePointerDown = (): void => {
+    audio.unlock();
+  };
+
   private handleKeyDown = (e: KeyboardEvent): void => {
+    audio.unlock();
+
     // 阻止游戏控制按键的浏览器默认滚动行为
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyW', 'KeyS', 'KeyA', 'KeyD'].includes(e.code)) {
       e.preventDefault();
