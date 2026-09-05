@@ -1,15 +1,50 @@
 /**
- * 经典 FC 坦克大战 8-bit 复古合成音效引擎 (基于原生 Web Audio API，零外部依赖)
- * 采用 Nintendo NES 2A03 APU LFSR 噪声芯片级仿真
+ * 经典 FC 坦克大战 8-bit 复古合成音效引擎 (基于原生 Web Audio API + 原版 WAV 采样缓存)
  */
 export class AudioManager {
   private ctx: AudioContext | null = null;
   public enabled: boolean = true;
 
+  private explosionBuffer: AudioBuffer | null = null;
+  private stageStartBuffer: AudioBuffer | null = null;
+
+  constructor() {
+    // 异步静默加载原版 wav
+    this.loadAudioFiles();
+  }
+
+  private async loadAudioFiles(): Promise<void> {
+    try {
+      const expRes = await fetch('/assets/audio/explosion.wav');
+      if (expRes.ok) {
+        const expArray = await expRes.arrayBuffer();
+        const ctx = this.ensureContext();
+        if (ctx) {
+          this.explosionBuffer = await ctx.decodeAudioData(expArray);
+        }
+      }
+
+      const startRes = await fetch('/assets/audio/stage_start.wav');
+      if (startRes.ok) {
+        const startArray = await startRes.arrayBuffer();
+        const ctx = this.ensureContext();
+        if (ctx) {
+          this.stageStartBuffer = await ctx.decodeAudioData(startArray);
+        }
+      }
+    } catch {
+      // 降级使用内部合成器
+    }
+  }
+
   public unlock(): void {
     const ctx = this.ensureContext();
     if (ctx && ctx.state === 'suspended') {
       ctx.resume().catch(() => {});
+    }
+    // 如果之前未初始化完成，继续尝试加载
+    if (!this.explosionBuffer || !this.stageStartBuffer) {
+      this.loadAudioFiles();
     }
   }
 
@@ -30,7 +65,42 @@ export class AudioManager {
   }
 
   /**
-   * 原版 FC 坦克射击音效：高频下沉方波 (2A03 脉冲波)
+   * 经典开场/重新开始 8-bit "噔 噔 噔" 开场音
+   */
+  public playStageStart(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    if (this.stageStartBuffer) {
+      const source = ctx.createBufferSource();
+      source.buffer = this.stageStartBuffer;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.45, ctx.currentTime);
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start();
+      return;
+    }
+
+    // 备选降级方波
+    const notes = [392, 523, 659, 784, 880, 1046];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const st = ctx.currentTime + idx * 0.08;
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, st);
+      gain.gain.setValueAtTime(0.2, st);
+      gain.gain.exponentialRampToValueAtTime(0.01, st + 0.09);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(st);
+      osc.stop(st + 0.1);
+    });
+  }
+
+  /**
+   * 原版 FC 坦克射击音效：短促清脆的 2A03 方波脉冲 (0.08s)
    */
   public playShoot(): void {
     const ctx = this.ensureContext();
@@ -40,95 +110,59 @@ export class AudioManager {
     const gain = ctx.createGain();
 
     osc.type = 'square';
-    osc.frequency.setValueAtTime(860, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.11);
+    osc.frequency.setValueAtTime(650, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.08);
 
-    gain.gain.setValueAtTime(0.25, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.11);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.08);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
     osc.start();
-    osc.stop(ctx.currentTime + 0.11);
+    osc.stop(ctx.currentTime + 0.08);
   }
 
   /**
-   * 经典 FC 原版坦克爆炸音效 (NES 2A03 LFSR 噪声下沉仿真)
-   * 纯正的红白机粗颗粒炸裂声：高频爆破启动 -> 逐级快速降频撕裂 -> 低频轰鸣消退
+   * 原版 FC 坦克爆炸音效 (优先使用原版 WAV 采样)
    */
   public playKillEnemy(): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
 
-    const now = ctx.currentTime;
-    const duration = 0.48;
-    const sampleRate = ctx.sampleRate;
-    const totalSamples = Math.floor(sampleRate * duration);
-
-    // 创建 AudioBuffer 真实模拟 NES 15-bit LFSR (Linear Feedback Shift Register)
-    const buffer = ctx.createBuffer(1, totalSamples, sampleRate);
-    const channel = buffer.getChannelData(0);
-
-    let shiftRegister = 0x7fff; // 15-bit NES noise LFSR 初始种子
-    let sampleCounter = 0;
-    let currentBit = 1;
-
-    for (let i = 0; i < totalSamples; i++) {
-      const t = i / totalSamples; // 进度 0.0 ~ 1.0
-
-      // NES 原版爆炸秘诀：时钟周期动态拉长 (频率从 ~12kHz 极速骤降到 ~400Hz)
-      // 产生红白机标志性的“粗糙下沉撕裂颗粒感”
-      const periodSamples = Math.max(
-        2,
-        Math.floor(sampleRate / (12000 * Math.pow(1 - t * 0.95, 3.2) + 380))
-      );
-
-      sampleCounter++;
-      if (sampleCounter >= periodSamples) {
-        sampleCounter = 0;
-        // 经典 NES Mode 0: bit 0 XOR bit 1
-        const feedback = (shiftRegister & 1) ^ ((shiftRegister >> 1) & 1);
-        shiftRegister = (shiftRegister >> 1) | (feedback << 14);
-        currentBit = (shiftRegister & 1) ? 1 : -1;
-      }
-
-      // 4-bit 阶梯衰减音量 (模拟红白机 16 级音量包络)
-      const rawVolume = Math.pow(1 - t, 1.2);
-      const steppedVolume = Math.floor(rawVolume * 15) / 15;
-
-      channel[i] = currentBit * steppedVolume * 0.7;
+    if (this.explosionBuffer) {
+      const source = ctx.createBufferSource();
+      source.buffer = this.explosionBuffer;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start();
+      return;
     }
 
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.9, now);
-    gain.gain.linearRampToValueAtTime(0.01, now + duration);
-
-    source.connect(gain);
-    gain.connect(ctx.destination);
-    source.start(now);
+    // 备选降级 NES 2A03 采样
+    this.fallbackExplosion(ctx, 0.22, 0.35);
   }
 
-  /**
-   * 小型爆破音效 (子弹触碰/微型火花)
-   */
   public playExplosion(isBig: boolean = false): void {
-    const ctx = this.ensureContext();
-    if (!ctx) return;
-
     if (isBig) {
       this.playKillEnemy();
       return;
     }
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    this.fallbackExplosion(ctx, 0.1, 0.2);
+  }
 
-    const duration = 0.14;
+  private fallbackExplosion(
+    ctx: AudioContext,
+    duration: number,
+    volume: number
+  ): void {
     const now = ctx.currentTime;
     const sampleRate = ctx.sampleRate;
     const totalSamples = Math.floor(sampleRate * duration);
-
     const buffer = ctx.createBuffer(1, totalSamples, sampleRate);
     const channel = buffer.getChannelData(0);
 
@@ -140,7 +174,7 @@ export class AudioManager {
       const t = i / totalSamples;
       const periodSamples = Math.max(
         3,
-        Math.floor(sampleRate / (8000 * Math.pow(1 - t * 0.8, 2) + 500))
+        Math.floor(sampleRate / (7000 * Math.pow(1 - t * 0.75, 1.8) + 1200))
       );
 
       sampleCounter++;
@@ -148,11 +182,9 @@ export class AudioManager {
         sampleCounter = 0;
         const feedback = (shiftRegister & 1) ^ ((shiftRegister >> 1) & 1);
         shiftRegister = (shiftRegister >> 1) | (feedback << 14);
-        currentBit = (shiftRegister & 1) ? 1 : -1;
+        currentBit = shiftRegister & 1 ? 1 : -1;
       }
-
-      const steppedVolume = Math.floor((1 - t) * 15) / 15;
-      channel[i] = currentBit * steppedVolume * 0.45;
+      channel[i] = currentBit * Math.pow(1 - t, 1.8) * volume;
     }
 
     const source = ctx.createBufferSource();
@@ -168,7 +200,7 @@ export class AudioManager {
     const ctx = this.ensureContext();
     if (!ctx) return;
 
-    const duration = 0.06;
+    const duration = 0.05;
     const now = ctx.currentTime;
     const sampleRate = ctx.sampleRate;
     const totalSamples = Math.floor(sampleRate * duration);
@@ -183,13 +215,13 @@ export class AudioManager {
     for (let i = 0; i < totalSamples; i++) {
       const t = i / totalSamples;
       sampleCounter++;
-      if (sampleCounter >= 6) {
+      if (sampleCounter >= 5) {
         sampleCounter = 0;
         const feedback = (shiftRegister & 1) ^ ((shiftRegister >> 1) & 1);
         shiftRegister = (shiftRegister >> 1) | (feedback << 14);
-        currentBit = (shiftRegister & 1) ? 1 : -1;
+        currentBit = shiftRegister & 1 ? 1 : -1;
       }
-      channel[i] = currentBit * (1 - t) * 0.35;
+      channel[i] = currentBit * (1 - t) * 0.22;
     }
 
     const source = ctx.createBufferSource();
@@ -211,16 +243,16 @@ export class AudioManager {
 
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(1400, now);
-    osc.frequency.setValueAtTime(2000, now + 0.025);
+    osc.frequency.setValueAtTime(2000, now + 0.02);
 
-    gain.gain.setValueAtTime(0.35, now);
-    gain.gain.linearRampToValueAtTime(0.01, now + 0.07);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
     osc.start(now);
-    osc.stop(now + 0.07);
+    osc.stop(now + 0.05);
   }
 
   /**
@@ -239,7 +271,7 @@ export class AudioManager {
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(freq, startTime);
 
-      gain.gain.setValueAtTime(0.25, startTime);
+      gain.gain.setValueAtTime(0.2, startTime);
       gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.18);
 
       osc.connect(gain);

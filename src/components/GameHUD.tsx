@@ -1,3 +1,5 @@
+import { audio } from '../game/audio/AudioManager';
+
 interface GameHUDProps {
   score: number;
   lives: number;
@@ -102,6 +104,21 @@ export function GameHUD({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <button
+            onClick={() => audio.playStageStart()}
+            style={{
+              padding: '8px',
+              backgroundColor: '#d89b00',
+              color: '#000000',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 8px rgba(216, 155, 0, 0.4)',
+            }}
+          >
+            🎵 开场号角 (噔噔瞪)
+          </button>
           <button
             onClick={onPauseToggle}
             style={{

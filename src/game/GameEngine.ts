@@ -163,6 +163,7 @@ export class GameEngine {
     }
 
     this.gameState = GameState.PLAYING;
+    audio.playStageStart();
     this.emitState();
   }
 
@@ -189,6 +190,7 @@ export class GameEngine {
     }
 
     this.gameState = GameState.PLAYING;
+    audio.playStageStart();
     this.emitState();
   }
 
