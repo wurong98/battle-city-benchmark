@@ -14,6 +14,7 @@ import { RenderSystem } from './rendering/RenderSystem';
 import { audio } from './audio/AudioManager';
 import {
   GameState,
+  Direction,
   type GameWorld,
   type TankEntity,
 } from './types/game';
@@ -127,6 +128,14 @@ export class GameEngine {
     audio.playStageStart();
     this.emitState();
     this.gameLoop.start();
+  }
+
+  public setVirtualDirection(dir: Direction | null): void {
+    this.inputSystem.setVirtualDirection(dir);
+  }
+
+  public setVirtualFire(firing: boolean): void {
+    this.inputSystem.setVirtualFire(firing);
   }
 
   public pause(): void {

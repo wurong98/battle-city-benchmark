@@ -22,6 +22,8 @@ export class InputSystem {
 
   // 按下时间栈，用于解决多个方向键同时按住时的优先级切换
   private activeDirections: Direction[] = [];
+  // 外部触屏/虚拟控制器方向输入
+  private virtualDirection: Direction | null = null;
   public pauseRequested = false;
 
   constructor() {
@@ -124,9 +126,32 @@ export class InputSystem {
   }
 
   /**
+   * 外部虚拟手柄控制接口：设置当前方向
+   */
+  public setVirtualDirection(dir: Direction | null): void {
+    audio.unlock();
+    this.virtualDirection = dir;
+    this.keys.up = dir === Direction.Up;
+    this.keys.down = dir === Direction.Down;
+    this.keys.left = dir === Direction.Left;
+    this.keys.right = dir === Direction.Right;
+  }
+
+  /**
+   * 外部虚拟手柄控制接口：设置开火状态
+   */
+  public setVirtualFire(firing: boolean): void {
+    audio.unlock();
+    this.keys.fire = firing;
+  }
+
+  /**
    * 获取当前最优先的方向指令，如果没有按住任何方向键则返回 null
    */
   public getCurrentDirection(): Direction | null {
+    if (this.virtualDirection !== null) {
+      return this.virtualDirection;
+    }
     if (this.activeDirections.length === 0) return null;
     return this.activeDirections[this.activeDirections.length - 1];
   }
