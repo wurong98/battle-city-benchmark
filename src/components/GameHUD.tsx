@@ -6,6 +6,7 @@ interface GameHUDProps {
   gameState: string;
   onRestart: () => void;
   onPauseToggle: () => void;
+  isMobile?: boolean;
 }
 
 export function GameHUD({
@@ -16,10 +17,123 @@ export function GameHUD({
   gameState,
   onRestart,
   onPauseToggle,
+  isMobile = false,
 }: GameHUDProps) {
-  // 生成代表敌军数量的经典坦克小方块 (最多 20 个)
   const enemyIcons = Array.from({ length: Math.max(0, enemiesRemaining) });
 
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          width: '90px',
+          backgroundColor: '#26262a',
+          border: '2px solid #444444',
+          borderRadius: '6px',
+          padding: '8px 6px',
+          color: '#ffffff',
+          fontFamily: '"Courier New", Courier, monospace',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          boxSizing: 'border-box',
+          userSelect: 'none',
+          fontSize: '11px',
+          flexShrink: 0,
+        }}
+      >
+        <div>
+          {/* 关卡与分数 */}
+          <div style={{ textAlign: 'center', marginBottom: '6px' }}>
+            <div style={{ color: '#888888', fontSize: '10px' }}>STAGE</div>
+            <div style={{ fontWeight: 'bold', color: '#ffcc00', fontSize: '14px' }}>
+              🚩{stage}
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <div style={{ color: '#888888', fontSize: '10px' }}>SCORE</div>
+            <div style={{ fontWeight: 'bold', color: '#ffcc00', fontSize: '12px' }}>
+              {score}
+            </div>
+          </div>
+
+          {/* 生命 */}
+          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <div style={{ color: '#888888', fontSize: '10px' }}>LIFE</div>
+            <div style={{ fontWeight: 'bold', color: '#ffffff', fontSize: '14px' }}>
+              🟡 {lives}
+            </div>
+          </div>
+
+          {/* 剩余敌人简标 */}
+          <div style={{ textAlign: 'center', marginBottom: '6px' }}>
+            <div style={{ color: '#888888', fontSize: '10px' }}>FOE: {enemiesRemaining}</div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '2px',
+                backgroundColor: '#111111',
+                padding: '4px 2px',
+                borderRadius: '2px',
+                maxHeight: '60px',
+                overflow: 'hidden',
+              }}
+            >
+              {enemyIcons.slice(0, 16).map((_, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: '#e53935',
+                    borderRadius: '1px',
+                    margin: '0 auto',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 紧凑操作按键 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <button
+            onClick={onPauseToggle}
+            style={{
+              padding: '6px 2px',
+              backgroundColor: '#444444',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '11px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+            }}
+          >
+            {gameState === 'PAUSED' ? '▶ 继续' : '⏸ 暂停'}
+          </button>
+          <button
+            onClick={onRestart}
+            style={{
+              padding: '6px 2px',
+              backgroundColor: '#b22222',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '11px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+            }}
+          >
+            🔄 重来
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 桌面端标准 HUD
   return (
     <div
       style={{
@@ -35,6 +149,7 @@ export function GameHUD({
         justifyContent: 'space-between',
         boxSizing: 'border-box',
         userSelect: 'none',
+        flexShrink: 0,
       }}
     >
       <div>

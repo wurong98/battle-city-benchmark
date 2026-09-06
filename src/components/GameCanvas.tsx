@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { CANVAS_SIZE, CANVAS_SCALE } from '../game/constants';
+import { useEffect, useRef, useState } from 'react';
+import { CANVAS_SIZE } from '../game/constants';
 import { GameEngine } from '../game/GameEngine';
 
 interface GameCanvasProps {
@@ -8,7 +8,46 @@ interface GameCanvasProps {
 
 export function GameCanvas({ onEngineReady }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
+  const [displaySize, setDisplaySize] = useState<number>(CANVAS_SIZE * 2);
+
+  // 监听容器或窗口尺寸，计算在横屏下等比缩放的最佳正方形大小
+  useEffect(() => {
+    const updateSize = () => {
+      // 移动端/横屏下可用高度以视口高度扣除微小留白为主
+      const isMobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        ) || window.innerWidth <= 1024;
+
+      const availHeight = window.innerHeight;
+      const availWidth = window.innerWidth;
+
+      if (isMobile) {
+        // 横屏状态下，以屏幕高度为核心基准，两边预留触控和HUD空间
+        const maxSquareByHeight = availHeight - 16;
+        const maxSquareByWidth = availWidth - 280; // 留给左右控制器与HUD的空间
+        const target = Math.floor(
+          Math.max(280, Math.min(maxSquareByHeight, maxSquareByWidth > 0 ? maxSquareByWidth : maxSquareByHeight))
+        );
+        setDisplaySize(target);
+      } else {
+        // 桌面端保持 832px 或根据窗口高度等比自适应
+        const maxDesktop = Math.min(832, availHeight - 140);
+        setDisplaySize(Math.max(416, maxDesktop));
+      }
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    window.addEventListener('orientationchange', updateSize);
+
+    return () => {
+      window.removeEventListener('resize', updateSize);
+      window.removeEventListener('orientationchange', updateSize);
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -16,7 +55,6 @@ export function GameCanvas({ onEngineReady }: GameCanvasProps) {
 
     const engine = new GameEngine(canvas);
     engineRef.current = engine;
-    // 引擎保持在 READY 状态，等待用户点击开始进入 PLAYING 并播放原版开场音乐
 
     if (onEngineReady) {
       onEngineReady(engine);
@@ -30,12 +68,18 @@ export function GameCanvas({ onEngineReady }: GameCanvasProps) {
 
   return (
     <div
+      ref={containerRef}
       style={{
-        display: 'inline-block',
-        border: '4px solid #4a4a4a',
-        borderRadius: '4px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: '3px solid #4a4a4a',
+        borderRadius: '6px',
         backgroundColor: '#000000',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.7)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.8)',
+        position: 'relative',
+        flexShrink: 0,
+        overflow: 'hidden',
       }}
     >
       <canvas
@@ -43,8 +87,8 @@ export function GameCanvas({ onEngineReady }: GameCanvasProps) {
         width={CANVAS_SIZE}
         height={CANVAS_SIZE}
         style={{
-          width: CANVAS_SIZE * CANVAS_SCALE,
-          height: CANVAS_SIZE * CANVAS_SCALE,
+          width: `${displaySize}px`,
+          height: `${displaySize}px`,
           display: 'block',
           imageRendering: 'pixelated',
         }}

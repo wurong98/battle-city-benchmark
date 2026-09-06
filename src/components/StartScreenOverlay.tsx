@@ -8,10 +8,7 @@ export function StartScreenOverlay({ onStart }: StartScreenOverlayProps) {
       onClick={onStart}
       style={{
         position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '832px',
-        height: '832px',
+        inset: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.88)',
         display: 'flex',
         flexDirection: 'column',
@@ -20,18 +17,21 @@ export function StartScreenOverlay({ onStart }: StartScreenOverlayProps) {
         cursor: 'pointer',
         userSelect: 'none',
         zIndex: 50,
+        padding: '16px',
+        boxSizing: 'border-box',
       }}
     >
       <div
         style={{
           color: '#e52521',
-          fontSize: '52px',
+          fontSize: 'clamp(32px, 6vw, 52px)',
           fontWeight: '900',
-          letterSpacing: '8px',
+          letterSpacing: '6px',
           fontFamily: '"Courier New", Courier, monospace',
-          textShadow: '4px 4px #990000, 0 0 20px rgba(229, 37, 33, 0.4)',
-          marginBottom: '8px',
+          textShadow: '3px 3px #990000, 0 0 16px rgba(229, 37, 33, 0.4)',
+          marginBottom: '4px',
           textAlign: 'center',
+          lineHeight: '1.1',
         }}
       >
         BATTLE
@@ -39,13 +39,14 @@ export function StartScreenOverlay({ onStart }: StartScreenOverlayProps) {
       <div
         style={{
           color: '#e52521',
-          fontSize: '52px',
+          fontSize: 'clamp(32px, 6vw, 52px)',
           fontWeight: '900',
-          letterSpacing: '8px',
+          letterSpacing: '6px',
           fontFamily: '"Courier New", Courier, monospace',
-          textShadow: '4px 4px #990000, 0 0 20px rgba(229, 37, 33, 0.4)',
-          marginBottom: '28px',
+          textShadow: '3px 3px #990000, 0 0 16px rgba(229, 37, 33, 0.4)',
+          marginBottom: '16px',
           textAlign: 'center',
+          lineHeight: '1.1',
         }}
       >
         CITY
@@ -54,9 +55,9 @@ export function StartScreenOverlay({ onStart }: StartScreenOverlayProps) {
       <div
         style={{
           color: '#ffcc00',
-          fontSize: '20px',
+          fontSize: 'clamp(14px, 2.5vw, 20px)',
           fontFamily: 'monospace',
-          marginBottom: '40px',
+          marginBottom: '24px',
           letterSpacing: '3px',
         }}
       >
@@ -67,31 +68,30 @@ export function StartScreenOverlay({ onStart }: StartScreenOverlayProps) {
         style={{
           backgroundColor: '#ffcc00',
           color: '#000000',
-          padding: '16px 36px',
+          padding: '12px 28px',
           borderRadius: '4px',
-          fontSize: '24px',
+          fontSize: 'clamp(16px, 3vw, 22px)',
           fontWeight: 'bold',
-          letterSpacing: '4px',
+          letterSpacing: '3px',
           fontFamily: '"Courier New", Courier, monospace',
           boxShadow: '0 6px 20px rgba(255, 204, 0, 0.5)',
           animation: 'pulse 1.5s infinite',
         }}
       >
-        ▶ 点击开始游戏 (START)
+        ▶ 点击开始 (START)
       </div>
 
       <div
         style={{
-          marginTop: '36px',
+          marginTop: '20px',
           color: '#888888',
-          fontSize: '15px',
+          fontSize: 'clamp(11px, 2vw, 14px)',
           fontFamily: 'monospace',
           textAlign: 'center',
-          lineHeight: '1.8',
+          lineHeight: '1.6',
         }}
       >
-        点击任意区域即可入场并自动播放经典 8-bit 开场曲<br />
-        [WASD / 方向键] 移动 &nbsp;&nbsp;|&nbsp;&nbsp; [J / 空格] 开火
+        触屏支持虚拟摇杆 & 开火 | 键盘支持 WASD / 方向键
       </div>
     </div>
   );
