@@ -12,6 +12,7 @@ import { GameState, Direction } from './game/types/game';
 export default function App() {
   const [engine, setEngine] = useState<GameEngine | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCustomizingGamepad, setIsCustomizingGamepad] = useState(false);
   const [session, setSession] = useState({
     score: 0,
     lives: 3,
@@ -211,16 +212,24 @@ export default function App() {
           gameState={session.gameState}
           onRestart={handleRestart}
           onPauseToggle={handlePauseToggle}
+          onCustomizeGamepad={() => {
+            if (session.gameState === GameState.PLAYING) {
+              engine?.pause();
+            }
+            setIsCustomizingGamepad(true);
+          }}
           isMobile={isMobile}
         />
       </div>
 
-      {/* 移动端虚拟手柄 (D-Pad 十字键与 FIRE 按键) */}
+      {/* 移动端虚拟手柄 (D-Pad 十字键与 FIRE 按键，支持自定义拖动调整) */}
       {isMobile && (
         <VirtualGamepad
           onDirectionChange={handleDirectionChange}
           onFireChange={handleFireChange}
-          disabled={session.gameState !== GameState.PLAYING}
+          disabled={session.gameState !== GameState.PLAYING && !isCustomizingGamepad}
+          isEditing={isCustomizingGamepad}
+          onExitEditing={() => setIsCustomizingGamepad(false)}
         />
       )}
     </div>

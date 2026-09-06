@@ -6,6 +6,7 @@ interface GameHUDProps {
   gameState: string;
   onRestart: () => void;
   onPauseToggle: () => void;
+  onCustomizeGamepad?: () => void;
   isMobile?: boolean;
 }
 
@@ -17,6 +18,7 @@ export function GameHUD({
   gameState,
   onRestart,
   onPauseToggle,
+  onCustomizeGamepad,
   isMobile = false,
 }: GameHUDProps) {
   const enemyIcons = Array.from({ length: Math.max(0, enemiesRemaining) });
@@ -98,6 +100,23 @@ export function GameHUD({
 
         {/* 紧凑操作按键 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {onCustomizeGamepad && (
+            <button
+              onClick={onCustomizeGamepad}
+              style={{
+                padding: '6px 2px',
+                backgroundColor: '#2e7d32',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '11px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+              }}
+            >
+              ⚙️ 调键位
+            </button>
+          )}
           <button
             onClick={onPauseToggle}
             style={{

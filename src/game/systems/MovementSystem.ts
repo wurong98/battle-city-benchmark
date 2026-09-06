@@ -46,6 +46,15 @@ export class MovementSystem {
     // 2. 先验碰撞检测：与其它坦克
     for (const other of otherTanks) {
       if (other.id !== tank.id && other.active && intersects(nextRect, other)) {
+        // 容错兜底：若两辆坦克已经处于重叠状态（例如极端情况下出生在同处），
+        // 允许它们向彼此分离（减少重叠面积）的方向移动，防止互锁卡死
+        if (intersects(tank, other)) {
+          const currentOverlapArea = this.getOverlapArea(tank, other);
+          const nextOverlapArea = this.getOverlapArea(nextRect, other);
+          if (nextOverlapArea < currentOverlapArea) {
+            continue; // 允许分离移动
+          }
+        }
         return false;
       }
     }
@@ -54,6 +63,15 @@ export class MovementSystem {
     tank.x = nextX;
     tank.y = nextY;
     return true;
+  }
+
+  /**
+   * 计算两个重叠矩形的相交面积
+   */
+  private getOverlapArea(a: Rect, b: Rect): number {
+    const overlapX = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
+    const overlapY = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+    return overlapX * overlapY;
   }
 
   /**
