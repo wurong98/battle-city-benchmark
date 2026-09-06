@@ -24,16 +24,38 @@ export function GameOverOverlay({ score, stage, onRestart }: GameOverOverlayProp
     >
       <div
         style={{
-          fontSize: 'clamp(36px, 7vw, 60px)',
-          fontWeight: '900',
-          color: '#e53935',
-          letterSpacing: '6px',
-          textShadow: '3px 3px #000000',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          lineHeight: 1.15,
           marginBottom: '16px',
           animation: 'pulse 1.5s infinite',
         }}
       >
-        GAME OVER
+        <span
+          style={{
+            fontSize: 'clamp(28px, 6vw, 54px)',
+            fontWeight: '900',
+            color: '#e53935',
+            letterSpacing: '8px',
+            textShadow: '3px 3px #000000',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          GAME
+        </span>
+        <span
+          style={{
+            fontSize: 'clamp(28px, 6vw, 54px)',
+            fontWeight: '900',
+            color: '#e53935',
+            letterSpacing: '8px',
+            textShadow: '3px 3px #000000',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          OVER
+        </span>
       </div>
 
       <div
@@ -41,15 +63,15 @@ export function GameOverOverlay({ score, stage, onRestart }: GameOverOverlayProp
           backgroundColor: '#222222',
           border: '2px solid #555555',
           borderRadius: '8px',
-          padding: '12px 28px',
+          padding: '10px 24px',
           textAlign: 'center',
-          marginBottom: '20px',
+          marginBottom: '16px',
         }}
       >
-        <div style={{ fontSize: 'clamp(14px, 2.5vw, 18px)', color: '#aaaaaa', marginBottom: '6px' }}>
+        <div style={{ fontSize: 'clamp(12px, 2.5vw, 16px)', color: '#aaaaaa', marginBottom: '4px' }}>
           STAGE REACHED: <span style={{ color: '#ffffff', fontWeight: 'bold' }}>{stage}</span>
         </div>
-        <div style={{ fontSize: 'clamp(16px, 3vw, 22px)', color: '#ffcc00', fontWeight: 'bold' }}>
+        <div style={{ fontSize: 'clamp(14px, 3vw, 20px)', color: '#ffcc00', fontWeight: 'bold' }}>
           FINAL SCORE: {score}
         </div>
       </div>
@@ -57,8 +79,8 @@ export function GameOverOverlay({ score, stage, onRestart }: GameOverOverlayProp
       <button
         onClick={onRestart}
         style={{
-          padding: '10px 28px',
-          fontSize: 'clamp(15px, 2.5vw, 18px)',
+          padding: '10px 24px',
+          fontSize: 'clamp(13px, 2.5vw, 16px)',
           fontWeight: 'bold',
           backgroundColor: '#e53935',
           color: '#ffffff',
