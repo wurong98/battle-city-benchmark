@@ -4,29 +4,38 @@ interface OrientationLockOverlayProps {
   onDismiss?: () => void;
 }
 
+const getIsMobile = () => {
+  if (typeof window === 'undefined') return false;
+  return (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    ) ||
+    (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+    ('ontouchstart' in window && window.innerWidth <= 1024)
+  );
+};
+
+const getIsPortrait = () => {
+  if (typeof window === 'undefined') return false;
+  return (
+    window.innerHeight > window.innerWidth ||
+    Boolean(
+      window.screen.orientation &&
+        window.screen.orientation.type.includes('portrait')
+    )
+  );
+};
+
 /**
  * 屏幕横屏检测、锁定与竖屏全屏引导组件
  */
 export const OrientationLockOverlay: React.FC<OrientationLockOverlayProps> = ({ onDismiss }) => {
-  const [isPortrait, setIsPortrait] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isPortrait, setIsPortrait] = useState(getIsPortrait);
+  const [isMobile, setIsMobile] = useState(getIsMobile);
 
   const checkOrientation = useCallback(() => {
-    const isMobileDevice =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      ) ||
-      (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
-      ('ontouchstart' in window && window.innerWidth <= 1024);
-
-    setIsMobile(isMobileDevice);
-
-    const portrait =
-      window.innerHeight > window.innerWidth ||
-      (window.screen.orientation &&
-        window.screen.orientation.type.includes('portrait'));
-
-    setIsPortrait(portrait);
+    setIsMobile(getIsMobile());
+    setIsPortrait(getIsPortrait());
   }, []);
 
   // 尝试调用浏览器的横屏锁定与全屏 API
@@ -49,8 +58,6 @@ export const OrientationLockOverlay: React.FC<OrientationLockOverlayProps> = ({ 
   }, []);
 
   useEffect(() => {
-    checkOrientation();
-
     window.addEventListener('resize', checkOrientation);
     window.addEventListener('orientationchange', checkOrientation);
 
