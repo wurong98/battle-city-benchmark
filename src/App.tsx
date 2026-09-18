@@ -8,11 +8,13 @@ import { VirtualGamepad } from './components/VirtualGamepad';
 import { OrientationLockOverlay } from './components/OrientationLockOverlay';
 import { GameEngine } from './game/GameEngine';
 import { GameState, Direction } from './game/types/game';
+import type { GamepadInfo } from './game/systems/GamepadBridge';
 
 export default function App() {
   const [engine, setEngine] = useState<GameEngine | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isCustomizingGamepad, setIsCustomizingGamepad] = useState(false);
+  const [gamepadInfo, setGamepadInfo] = useState<GamepadInfo>({ connected: false });
   const [session, setSession] = useState({
     score: 0,
     lives: 3,
@@ -44,6 +46,12 @@ export default function App() {
       setSession(state);
     });
   }, []);
+
+  // 订阅手柄连接状态(仅桌面端有意义,移动端无 Gamepad API)
+  useEffect(() => {
+    if (!engine || isMobile) return;
+    return engine.subscribeGamepad(setGamepadInfo);
+  }, [engine, isMobile]);
 
   // 尝试锁定横屏与全屏
   const tryLockLandscape = useCallback(async () => {
@@ -137,6 +145,32 @@ export default function App() {
           <p style={{ margin: '4px 0 0 0', color: '#888888', fontSize: '13px' }}>
             React + TypeScript + Canvas 2D (Fixed Timestep 60Hz)
           </p>
+          {gamepadInfo.connected && (
+            <div
+              data-testid="gamepad-badge"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginTop: '8px',
+                padding: '4px 10px',
+                backgroundColor: 'rgba(46, 125, 50, 0.15)',
+                border: '1px solid #2e7d32',
+                borderRadius: '12px',
+                color: '#a5d6a7',
+                fontSize: '12px',
+                fontFamily: 'monospace',
+              }}
+            >
+              <span>🎮</span>
+              <span>
+                Xbox Controller Connected
+                {gamepadInfo.mapping === 'standard' && (
+                  <span style={{ color: '#666', marginLeft: '6px' }}>(standard)</span>
+                )}
+              </span>
+            </div>
+          )}
         </header>
       )}
 
