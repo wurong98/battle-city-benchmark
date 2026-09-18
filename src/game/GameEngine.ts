@@ -6,6 +6,7 @@ import { Bullet } from './entities/Bullet';
 import { PlayerTank } from './entities/PlayerTank';
 import { BulletSystem } from './systems/BulletSystem';
 import { InputSystem } from './systems/InputSystem';
+import { GamepadBridge, type GamepadInfo } from './systems/GamepadBridge';
 import { MovementSystem } from './systems/MovementSystem';
 import { SpawnSystem } from './systems/SpawnSystem';
 import { EnemyAISystem } from './systems/EnemyAISystem';
@@ -33,6 +34,7 @@ export class GameEngine {
   public gameState: string = GameState.READY;
 
   private inputSystem: InputSystem;
+  private gamepadBridge: GamepadBridge;
   private movementSystem: MovementSystem;
   private bulletSystem: BulletSystem;
   private spawnSystem: SpawnSystem;
@@ -83,6 +85,16 @@ export class GameEngine {
 
     // 系统装载
     this.inputSystem = new InputSystem();
+    this.gamepadBridge = new GamepadBridge(
+      (dir) => this.inputSystem.setVirtualDirection(dir),
+      (firing) => this.inputSystem.setVirtualFire(firing),
+      () => {
+        // 走现有的 pauseRequested 通道,由 update() 在下一个 tick 统一处理
+        this.inputSystem.pauseRequested = true;
+      },
+      // 初始无 UI 订阅者,App.tsx 在 mount 后通过 subscribeGamepad 注册
+      () => {}
+    );
     this.movementSystem = new MovementSystem();
     this.bulletSystem = new BulletSystem();
     this.spawnSystem = new SpawnSystem();
@@ -136,6 +148,13 @@ export class GameEngine {
 
   public setVirtualFire(firing: boolean): void {
     this.inputSystem.setVirtualFire(firing);
+  }
+
+  /**
+   * 订阅手柄连接/断开事件。回调会在挂载时立刻以当前状态调用一次。
+   */
+  public subscribeGamepad(cb: (info: GamepadInfo) => void): () => void {
+    return this.gamepadBridge.subscribe(cb);
   }
 
   public pause(): void {
@@ -211,6 +230,7 @@ export class GameEngine {
   public destroy(): void {
     audio.stopTankMove();
     this.gameLoop.stop();
+    this.gamepadBridge.destroy();
     this.inputSystem.destroy();
     this.eventListeners = [];
   }
